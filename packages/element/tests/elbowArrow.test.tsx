@@ -428,3 +428,65 @@ describe("elbow arrow ui", () => {
     ]);
   });
 });
+
+describe("elbow arrow one-corner routes", () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+  });
+
+  const connect = (diamondY: number) => {
+    // the rectangle's right side's middle is at y = 127.5
+    UI.createElement("rectangle", { x: 0, y: 100, width: 120, height: 55 });
+    UI.createElement("diamond", {
+      x: 220,
+      y: diamondY,
+      width: 200,
+      height: 124,
+    });
+    UI.clickTool("arrow");
+    UI.clickOnTestId("elbow-arrow");
+    mouse.reset();
+    mouse.moveTo(120, 127.5);
+    mouse.click();
+    mouse.moveTo(320, diamondY);
+    mouse.click();
+
+    return h.elements.find(
+      (element) => element.type === "arrow",
+    ) as ExcalidrawElbowArrowElement;
+  };
+
+  it("connects elements closer than the padding with a single corner", () => {
+    // 40px from the rectangle's side to the diamond's top: no step to the
+    // padding around the diamond on the way
+    const arrow = connect(167.5);
+
+    expect(arrow.points).toCloselyEqualPoints([
+      [0, 0],
+      [195, 0],
+      [195, 34.15],
+    ]);
+  });
+
+  it("routes around the elements when a single corner doesn't fit", () => {
+    const arrow = connect(167.5);
+
+    // the rectangle below the diamond's top: the corner would be inside it
+    UI.clickTool("selection");
+    mouse.reset();
+    mouse.moveTo(60, 100);
+    mouse.down();
+    mouse.moveTo(60, 180);
+    mouse.up();
+
+    expect(arrow.points.length).toBeGreaterThan(3);
+  });
+
+  it("doesn't put the arrowhead on a leg too short for it", () => {
+    // 25px from the rectangle's side to the diamond's top
+    const arrow = connect(152.5);
+
+    expect(arrow.points.length).toBeGreaterThan(3);
+  });
+});
